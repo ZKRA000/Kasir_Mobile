@@ -15,7 +15,7 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> {
   final Map<String, dynamic> _formData = {};
   final Map<String, dynamic> _errors = {};
-  late final Model model;
+  final Model model = Model();
 
   void login() async {
     setState(() {

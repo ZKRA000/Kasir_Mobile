@@ -1,65 +1,109 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:kasir/models/item.dart';
-
-class ItemBundle {
-  final String name;
-  final int id;
-  final int price;
-  int count;
-  int totalPrice = 0;
-
-  ItemBundle({
-    required this.name,
-    required this.id,
-    required this.price,
-    this.count = 1,
-  });
-
-  int getTotalPrice() {
-    return count * price;
-  }
-
-  factory ItemBundle.fromJSON(data) {
-    return ItemBundle(
-      name: data['nama'],
-      id: data['id'],
-      price: data['harga'],
-      count: 0,
-    );
-  }
-}
+import 'package:kasir/collections/item_bundle_collection.dart';
+import 'package:kasir/collections/item_collection.dart';
+import 'package:kasir/components/my_input.dart';
+import 'package:kasir/models/item_model.dart';
+import 'package:kasir/other/helper.dart';
 
 class ItemFormPage extends StatefulWidget {
-  const ItemFormPage({super.key});
+  final ItemCollection? data;
+  const ItemFormPage({super.key, this.data});
 
   @override
   State<ItemFormPage> createState() => _ItemFormPage();
 }
 
 class _ItemFormPage extends State<ItemFormPage> {
-  ItemModel itemModel = ItemModel();
-
-  // global
   final Map<String, dynamic> _formData = {};
-  List<dynamic> _bundle = [];
-  List<dynamic> items = [];
-  late PageController _pageViewController;
-
-  //bottomsheet
+  final Map<String, dynamic> _errors = {};
+  final List<ItemBundle> _bundle = [];
+  final List<dynamic> _items = [];
+  late final PageController _pageViewController;
   int _selectedItemIndex = 0;
+  ItemModel itemModel = ItemModel();
   late int jumlah;
 
-  void fetchItem() async {
-    var data = await itemModel.all();
-
+  void prepareForm([data]) {
     setState(() {
-      items = jsonDecode(data.body);
+      if (data != null) {
+        _formData['id'] = data.id;
+        _formData['nama'] = data.nama;
+        _formData['type'] = data.bundle == null ? 'single' : 'bundle';
+
+        if (_formData['type'] == 'bundle') {
+          _formData['items'] = [];
+          for (var i in data.bundle) {
+            _bundle.add(i);
+            _formData['items'].add({
+              'id': i.id,
+              'qty': i.count,
+            });
+          }
+          _pageViewController = PageController(initialPage: 1);
+        } else {
+          _formData['harga'] = data.harga.toString();
+          _pageViewController = PageController(initialPage: 0);
+        }
+      } else {
+        _formData['type'] = 'single';
+        _pageViewController = PageController(initialPage: 0);
+      }
     });
   }
 
+  void cleanErrorsValidation() {
+    setState(() {
+      _errors.clear();
+    });
+  }
+
+  void errorValidation(response) {
+    if (response.containsKey('errors')) {
+      setState(() {
+        for (var key in response['errors'].keys) {
+          _errors[key] = response['errors'][key].first;
+        }
+      });
+    }
+  }
+
+  void fetchItem() async {
+    var response = await itemModel.all();
+    if (mounted) {
+      setState(() {
+        _items.addAll(jsonDecode(response.body));
+      });
+    }
+  }
+
   void createItem() async {
+    cleanErrorsValidation();
+    getFormData();
+    var response = await itemModel.create(_formData);
+    var responseJson = jsonDecode(response.body);
+    if (responseJson.containsKey('errors')) {
+      errorValidation(response);
+    } else if (mounted) {
+      Navigator.pop(context, responseJson);
+    }
+  }
+
+  void updateItem() async {
+    cleanErrorsValidation();
+    getFormData();
+    var response = await itemModel.update(_formData);
+    var responseJson = jsonDecode(response.body);
+    if (responseJson.containsKey('errors')) {
+      errorValidation(response);
+    }
+    if (mounted) {
+      Navigator.pop(context, responseJson);
+    }
+  }
+
+  void getFormData() {
     if (_formData['type'] == 'bundle') {
       _formData['items'] = [];
       for (var e = 0; e < _bundle.length; e++) {
@@ -69,35 +113,32 @@ class _ItemFormPage extends State<ItemFormPage> {
         });
       }
     }
-
-    var response = await itemModel.create(_formData);
-    if (response.statusCode == 200) {
-      if (context.mounted) {
-        Navigator.pop(context);
-      }
-    }
   }
 
   @override
   void initState() {
     super.initState();
 
-    _formData['type'] = 'single';
-    _pageViewController = PageController(initialPage: 0);
-
     fetchItem();
+
+    if (widget.data != null) {
+      prepareForm(widget.data);
+    } else {
+      prepareForm();
+    }
   }
 
   @override
   void dispose() {
-    // TODO: implement dispose
     super.dispose();
     _pageViewController.dispose();
   }
 
   void toPage(index) {
-    _pageViewController.animateToPage(index,
-        duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    if (_pageViewController.hasClients) {
+      _pageViewController.animateToPage(index,
+          duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    }
   }
 
   @override
@@ -109,7 +150,11 @@ class _ItemFormPage extends State<ItemFormPage> {
           actions: [
             IconButton(
               onPressed: () {
-                createItem();
+                if (_formData['id'] != null) {
+                  updateItem();
+                } else {
+                  createItem();
+                }
               },
               icon: const Icon(Icons.save),
             ),
@@ -163,22 +208,16 @@ class _ItemFormPage extends State<ItemFormPage> {
                   ],
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12.0),
-                child: Text('Name'),
-              ),
+              const SizedBox(height: 12.0),
               Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: TextFormField(
+                padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                child: MyInput(
+                  label: 'Name',
                   initialValue: _formData['nama'],
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    contentPadding: EdgeInsets.all(12.0),
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (value) {
+                  errorText: _errors['nama'],
+                  onChanged: (val) {
                     setState(() {
-                      _formData['nama'] = value;
+                      _formData['nama'] = val;
                     });
                   },
                 ),
@@ -193,19 +232,15 @@ class _ItemFormPage extends State<ItemFormPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Price'),
-                          SizedBox(height: 12.0),
-                          TextFormField(
+                          const SizedBox(height: 12.0),
+                          MyInput(
+                            label: 'Price',
                             initialValue: _formData['harga'],
                             keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              isDense: true,
-                              contentPadding: EdgeInsets.all(12.0),
-                              border: OutlineInputBorder(),
-                            ),
-                            onChanged: (value) {
+                            errorText: _errors['harga'],
+                            onChanged: (val) {
                               setState(() {
-                                _formData['harga'] = value;
+                                _formData['harga'] = val;
                               });
                             },
                           ),
@@ -217,8 +252,8 @@ class _ItemFormPage extends State<ItemFormPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Item Bundle'),
-                          SizedBox(height: 12.0),
+                          const Text('Item Bundle'),
+                          const SizedBox(height: 12.0),
                           ...List.generate(
                             _bundle.length,
                             (index) {
@@ -234,11 +269,25 @@ class _ItemFormPage extends State<ItemFormPage> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                            '${_bundle[index].name} @(${_bundle[index].price})'),
+                                          _bundle[index].name,
+                                          style: const TextStyle(
+                                            fontSize: 16.0,
+                                          ),
+                                        ),
                                         const SizedBox(height: 4.0),
-                                        Text(_bundle[index]
-                                            .getTotalPrice()
-                                            .toString()),
+                                        Text(
+                                          _bundle[index].getTotalPrice(),
+                                          style: const TextStyle(
+                                              color: Colors.blue,
+                                              fontWeight: FontWeight.w500),
+                                        ),
+                                        const SizedBox(height: 4.0),
+                                        Text(
+                                          '@${_bundle[index].getPrice()}',
+                                          style: const TextStyle(
+                                              fontSize: 12.0,
+                                              fontWeight: FontWeight.w500),
+                                        ),
                                       ],
                                     ),
                                     Row(
@@ -327,12 +376,12 @@ class _ItemFormPage extends State<ItemFormPage> {
                                                   ),
                                                   items: [
                                                     ...List.generate(
-                                                      items.length,
+                                                      _items.length,
                                                       (index) {
                                                         return DropdownMenuItem(
                                                           value: index,
                                                           child: Text(
-                                                            items[index]
+                                                            _items[index]
                                                                 ['nama'],
                                                           ),
                                                         );
@@ -374,8 +423,9 @@ class _ItemFormPage extends State<ItemFormPage> {
                                                   child: InkWell(
                                                     onTap: () {
                                                       ItemBundle newItem =
-                                                          ItemBundle.fromJSON(items[
-                                                              _selectedItemIndex]);
+                                                          ItemBundle.fromJSON(
+                                                              _items[
+                                                                  _selectedItemIndex]);
 
                                                       Iterable<dynamic> exists =
                                                           _bundle.where((e) {

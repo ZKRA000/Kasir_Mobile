@@ -6,7 +6,7 @@ import './routes/routes.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey();
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 
   createTable('personal_token', {
     'id': 'INTEGER PRIMARY KEY',
@@ -15,6 +15,7 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {

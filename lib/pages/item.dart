@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:kasir/models/abstract/model.dart';
-import 'package:kasir/models/item.dart';
+import 'package:kasir/collections/item_collection.dart';
+import 'package:kasir/helper/delete_dialog.dart';
+import 'package:kasir/models/item_model.dart';
+import 'package:kasir/other/helper.dart';
+import 'package:kasir/pages/item_form.dart';
 
 class ItemPage extends StatefulWidget {
   const ItemPage({super.key});
@@ -12,28 +15,43 @@ class ItemPage extends StatefulWidget {
 
 class _ItemPage extends State<ItemPage> {
   ItemModel itemModel = ItemModel();
-
-  List<dynamic> items = [];
+  final List<ItemCollection> _items = [];
   bool _loading = true;
 
   void fetchItem() async {
-    var data = await itemModel.all();
-
+    var response = await itemModel.all();
+    var responseJson = jsonDecode(response.body);
     setState(() {
-      items = jsonDecode(data.body);
+      for (var i in responseJson) {
+        _items.add(ItemCollection.fromJSON(i));
+      }
       _loading = false;
     });
   }
 
   void deleteitem(index) async {
-    var data = await itemModel.delete({'id': items[index]['id']});
+    await itemModel.delete({'id': _items[index].id});
 
     setState(() {
-      items.removeAt(index);
+      _items.removeAt(index);
     });
 
     if (context.mounted) {
       Navigator.pop(context);
+    }
+  }
+
+  void editItem(index) async {
+    final updateData = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ItemFormPage(data: _items[index]),
+      ),
+    );
+    if (updateData != null) {
+      setState(() {
+        _items[index] = ItemCollection.fromJSON(updateData);
+      });
     }
   }
 
@@ -43,31 +61,15 @@ class _ItemPage extends State<ItemPage> {
     fetchItem();
   }
 
-  Future<void> deleteDialog(index) {
-    return showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('Delete'),
-            content: Text(
-              'Apakah anda yakin ingin menghapus ${items[index]['nama']} ?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  deleteitem(index);
-                },
-                child: const Text('Ya'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: const Text('Tidak'),
-              ),
-            ],
-          );
-        });
+  void showDeleteDialog(index) async {
+    await deleteDialog(
+      context: context,
+      onDelete: () {
+        deleteitem(index);
+      },
+      title: 'Delete',
+      content: 'Apakah anda yakin ingin menghapus ${_items[index].nama} ?',
+    );
   }
 
   @override
@@ -79,7 +81,15 @@ class _ItemPage extends State<ItemPage> {
           actions: [
             IconButton(
               onPressed: () async {
-                final newItem = await Navigator.pushNamed(context, 'item-form');
+                final newData = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ItemFormPage()),
+                );
+                if (newData != null) {
+                  setState(() {
+                    _items.add(ItemCollection.fromJSON(newData));
+                  });
+                }
               },
               icon: const Icon(Icons.add),
             )
@@ -96,15 +106,18 @@ class _ItemPage extends State<ItemPage> {
             else
               Expanded(
                 child: ListView.builder(
-                  itemCount: items.length,
+                  itemCount: _items.length,
                   itemBuilder: (context, index) {
                     return ListTile(
-                      title: Text(items[index]['nama']),
-                      subtitle: Text('Rp.' + items[index]['harga'].toString()),
+                      title: Text(upperCaseFirst(_items[index].nama)),
+                      subtitle: Text("Rp. ${idrCurrency(_items[index].harga)}"),
                       trailing: PopupMenuButton(
                         onSelected: (value) {
                           if (value == 'delete') {
-                            deleteDialog(index);
+                            showDeleteDialog(index);
+                          }
+                          if (value == 'edit') {
+                            editItem(index);
                           }
                         },
                         itemBuilder: (context) {

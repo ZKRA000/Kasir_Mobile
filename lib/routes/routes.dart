@@ -7,6 +7,7 @@ import 'package:kasir/pages/nota.dart';
 import 'package:kasir/pages/penjualan.dart';
 import 'package:kasir/pages/report.dart';
 import 'package:kasir/pages/role.dart';
+import 'package:kasir/pages/role_form.dart';
 import 'package:kasir/pages/user.dart';
 import 'package:kasir/pages/user_form.dart';
 
@@ -19,6 +20,7 @@ Map<String, WidgetBuilder> routes = {
   'penjualan': (context) => const PenjualanPage(),
   'report': (context) => const ReportPage(),
   'role': (context) => const RolePage(),
+  'role-form': (context) => const RoleFormPage(),
   'user': (context) => const UserPage(),
   'user-form': (context) => const UserFormPage(),
 };

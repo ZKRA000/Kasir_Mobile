@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-class MyDropdown extends StatelessWidget {
+class MyDropdown<T> extends StatelessWidget {
   final dynamic initialValue;
-  final void Function(Object?) onChange;
+  final void Function(T?) onChange;
   final List<Map<String, dynamic>> items;
 
   const MyDropdown({
@@ -14,14 +14,18 @@ class MyDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonFormField(
-      value: initialValue,
+    return DropdownButtonFormField<T>(
+      value: items.isNotEmpty ? initialValue : null,
       decoration: const InputDecoration(
         isDense: true,
         contentPadding: EdgeInsets.all(12.0),
         border: OutlineInputBorder(),
       ),
       items: [
+        const DropdownMenuItem(
+          value: null,
+          child: Text('Select'),
+        ),
         for (int i = 0; i < items.length; i++)
           DropdownMenuItem(
             value: items[i]['value'],

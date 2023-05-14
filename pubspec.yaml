@@ -30,6 +30,7 @@ environment:
 dependencies:
   http:
   sqflite:
+  intl:
   
   flutter:
     sdk: flutter

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:kasir/components/my_dropdown.dart';
 
-class MyInputDropdown extends StatelessWidget {
+class MyInputDropdown<T> extends StatelessWidget {
   final String label;
   final dynamic initialValue;
-  final void Function(Object?) onChange;
+  final void Function(T?) onChange;
   final List<Map<String, dynamic>> items;
 
   const MyInputDropdown({
@@ -22,7 +22,8 @@ class MyInputDropdown extends StatelessWidget {
       children: [
         Text(label),
         const SizedBox(height: 8.0),
-        MyDropdown(initialValue: initialValue, onChange: onChange, items: items)
+        MyDropdown<T>(
+            initialValue: initialValue, onChange: onChange, items: items)
       ],
     );
   }
