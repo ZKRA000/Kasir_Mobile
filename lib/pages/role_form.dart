@@ -47,9 +47,9 @@ class _RoleFormPage extends State<RoleFormPage> {
 
       if (widget.data != null) {
         if (widget.data!.access.isNotEmpty) {
-          for (var i in _menus) {
-            if (widget.data!.access.contains(i.id)) {
-              _checkbox[i.name]['value'] = true;
+          for (var menu in _menus) {
+            if (widget.data!.access.contains(menu.id)) {
+              _checkbox[menu.name]['value'] = true;
             }
           }
         }
@@ -59,9 +59,12 @@ class _RoleFormPage extends State<RoleFormPage> {
 
   void createRole() async {
     cleanErrorsValidation();
-    _formData['access'] = _checkbox.entries.map((e) {
-      return e.value['value'] ? e.value['id'] : -1;
-    }).toList();
+    _formData['access'] = [];
+    _checkbox.forEach((key, value) {
+      if (value['value']) {
+        _formData['access'].add(value['id']);
+      }
+    });
     var response = await roleModel.create(_formData);
     var responseJson = jsonDecode(response.body);
     if (responseJson.containsKey('errors')) {
@@ -73,9 +76,12 @@ class _RoleFormPage extends State<RoleFormPage> {
 
   void updateRole() async {
     cleanErrorsValidation();
-    _formData['access'] = _checkbox.entries.map((e) {
-      return e.value['value'] ? e.value['id'] : -1;
-    }).toList();
+    _formData['access'] = [];
+    _checkbox.forEach((key, value) {
+      if (value['value']) {
+        _formData['access'].add(value['id']);
+      }
+    });
     var response = await roleModel.update(_formData);
     var responseJson = jsonDecode(response.body);
     if (responseJson.containsKey('errors')) {
