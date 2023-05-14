@@ -10,6 +10,10 @@ class PenjualanModel extends Model {
     return await post('$baseUrl/api/penjualan/create', body);
   }
 
+  Future<dynamic> update(body) async {
+    return await post('$baseUrl/api/penjualan/edit', body);
+  }
+
   Future<dynamic> delete(body) async {
     return await post('$baseUrl/api/penjualan/delete', body);
   }

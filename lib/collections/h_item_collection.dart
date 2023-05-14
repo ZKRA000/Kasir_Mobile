@@ -1,5 +1,3 @@
-import 'package:kasir/collections/item_bundle_collection.dart';
-
 class HItemCollection {
   final int itemId;
   final String nama;

@@ -17,7 +17,7 @@ class DPenjualanCollection {
     return DPenjualanCollection(
       penjualanId: json['penjualan_id'],
       quantity: json['quantity'],
-      notes: json['notes'],
+      notes: json['notes'] ?? '',
       hItem: HItemCollection.fromJSON(json['h_item']),
     );
   }

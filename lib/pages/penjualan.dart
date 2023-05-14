@@ -6,7 +6,7 @@ import 'package:kasir/components/my_scaffold.dart';
 import 'package:kasir/helper/delete_dialog.dart';
 import 'package:kasir/models/penjualan_model.dart';
 import 'package:kasir/other/helper.dart';
-import 'package:kasir/pages/penjualan-form.dart';
+import 'package:kasir/pages/penjualan_form.dart';
 
 class PenjualanPage extends StatefulWidget {
   const PenjualanPage({super.key});
@@ -37,7 +37,7 @@ class _PenjualanPage extends State<PenjualanPage> {
     );
     if (updateData != null) {
       setState(() {
-        _penjualan[index] = updateData;
+        _penjualan[index] = PenjualanCollection.fromJSON(updateData);
       });
     }
   }
@@ -77,10 +77,15 @@ class _PenjualanPage extends State<PenjualanPage> {
       title: const Text('Penjualan'),
       loading: false,
       onCreated: () async {
-        var newdata = await Navigator.push(
+        var newData = await Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const PenjualanFormPage()),
         );
+        if (newData != null) {
+          setState(() {
+            _penjualan.insert(0, PenjualanCollection.fromJSON(newData));
+          });
+        }
       },
       child: ListView.builder(
         itemCount: _penjualan.length,

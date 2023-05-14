@@ -38,6 +38,7 @@ class _PenjualanFormPage extends State<PenjualanFormPage> {
     setState(() {
       var data = widget.data;
       if (data != null) {
+        _formData['id'] = data.id;
         _formData['customer'] = data.customer;
         _formData['contact'] = data.contact;
         _formData['paid'] = data.paid;
@@ -45,11 +46,17 @@ class _PenjualanFormPage extends State<PenjualanFormPage> {
         _formData['nota'] = data.notaId;
 
         for (var i in data.dPenjualan) {
-          // _cart.add({
-          //   'item': ItemCollection(id: harga: i.hItem.harga,),
-          //   'jumlah': i.quantity,
-          //   'notes': i.notes,
-          // });
+          _cart.add({
+            'item': ItemCollection(
+              id: i.hItem.itemId,
+              nama: i.hItem.nama,
+              harga: i.hItem.harga,
+              version: i.hItem.version,
+              bundle: null,
+            ),
+            'jumlah': i.quantity,
+            'notes': i.notes,
+          });
         }
       }
     });
@@ -84,7 +91,6 @@ class _PenjualanFormPage extends State<PenjualanFormPage> {
   void fetchNota() async {
     var response = await notaModel.all();
     var responseJson = jsonDecode(response.body);
-    print(responseJson);
     if (mounted) {
       setState(() {
         for (var i in responseJson) {
@@ -99,11 +105,31 @@ class _PenjualanFormPage extends State<PenjualanFormPage> {
     for (var i in _cart) {
       _formData['item'].add({
         'id': i['item'].id,
+        'version': i['item'].version,
         'jumlah': i['jumlah'],
         'notes': i['notes'],
       });
     }
     var response = await penjualanModel.create(_formData);
+    var responseJson = jsonDecode(response.body);
+    if (responseJson.containsKey('errors')) {
+      errorValidation(responseJson);
+    } else if (mounted) {
+      Navigator.pop(context, responseJson);
+    }
+  }
+
+  void updatePenjualan() async {
+    _formData['item'] = [];
+    for (var i in _cart) {
+      _formData['item'].add({
+        'id': i['item'].id,
+        'version': i['item'].version,
+        'jumlah': i['jumlah'],
+        'notes': i['notes'],
+      });
+    }
+    var response = await penjualanModel.update(_formData);
     var responseJson = jsonDecode(response.body);
     if (responseJson.containsKey('errors')) {
       errorValidation(responseJson);
@@ -317,7 +343,11 @@ class _PenjualanFormPage extends State<PenjualanFormPage> {
     return MyScaffoldForm(
       title: 'Form Penjualan',
       onSave: () {
-        createPenjualan();
+        if (widget.data != null) {
+          updatePenjualan();
+        } else {
+          createPenjualan();
+        }
       },
       child: SingleChildScrollView(
         child: Column(
@@ -356,7 +386,7 @@ class _PenjualanFormPage extends State<PenjualanFormPage> {
               padding: const EdgeInsets.symmetric(horizontal: 12.0),
               child: MyInput(
                 label: 'Paid',
-                initialValue: _formData['paid'],
+                initialValue: _formData['paid'].toString(),
                 errorText: _errors['paid'],
                 keyboardType: TextInputType.number,
                 onChanged: (val) {
