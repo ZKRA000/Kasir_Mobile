@@ -5,13 +5,15 @@ import './routes/routes.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey();
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
 
   createTable('personal_token', {
     'id': 'INTEGER PRIMARY KEY',
     'token': 'TEXT',
   });
+
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {

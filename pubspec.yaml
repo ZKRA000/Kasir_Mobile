@@ -28,9 +28,11 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
-  http:
   sqflite:
   intl:
+  image_picker:
+  dio:
+  fluttertoast: ^8.2.1
   
   flutter:
     sdk: flutter
