@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:kasir/my_theme.dart';
 
 class MyScaffoldForm extends StatelessWidget {
   final String title;
-  final Widget child;
-  final void Function() onSave;
+  final List<Widget> children;
+  final bool scrollable;
+  final void Function()? onSave;
 
   const MyScaffoldForm({
     super.key,
     required this.title,
-    required this.onSave,
-    required this.child,
+    this.onSave,
+    this.scrollable = true,
+    required this.children,
   });
 
   @override
@@ -21,7 +24,8 @@ class MyScaffoldForm extends StatelessWidget {
         },
         child: Scaffold(
           appBar: AppBar(
-            title: Text('Create $title'),
+            backgroundColor: myPrimary,
+            title: Text(title),
             actions: [
               IconButton(
                 onPressed: onSave,
@@ -29,7 +33,16 @@ class MyScaffoldForm extends StatelessWidget {
               ),
             ],
           ),
-          body: child,
+          body: scrollable
+              ? SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: children,
+                  ),
+                )
+              : Column(
+                  children: children,
+                ),
         ),
       ),
     );

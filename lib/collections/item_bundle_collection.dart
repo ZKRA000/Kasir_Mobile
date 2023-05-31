@@ -1,3 +1,4 @@
+import 'package:kasir/collections/item_collection.dart';
 import 'package:kasir/other/helper.dart';
 
 class ItemBundle {
@@ -28,6 +29,14 @@ class ItemBundle {
       id: data['id'],
       price: data['harga'],
       count: data['qty'] ?? 0,
+    );
+  }
+
+  factory ItemBundle.fromItem(ItemCollection item) {
+    return ItemBundle(
+      name: item.nama,
+      id: item.id,
+      price: item.harga,
     );
   }
 }

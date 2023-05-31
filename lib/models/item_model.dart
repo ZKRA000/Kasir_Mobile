@@ -2,8 +2,8 @@ import 'package:kasir/models/abstract/model.dart';
 import 'package:kasir/other/env.dart';
 
 class ItemModel extends Model {
-  Future<dynamic> all() async {
-    return await get('$baseUrl/api/item');
+  Future<dynamic> all({String? except}) async {
+    return await get("$baseUrl/api/item${except != null ? '/$except' : ''}");
   }
 
   Future<dynamic> create(body) async {

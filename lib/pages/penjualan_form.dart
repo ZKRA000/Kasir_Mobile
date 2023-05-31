@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:kasir/collections/item_collection.dart';
 import 'package:kasir/collections/nota_collection.dart';
 import 'package:kasir/collections/penjualan_collection.dart';
+import 'package:kasir/components/my_error_text.dart';
 import 'package:kasir/components/my_input.dart';
 import 'package:kasir/components/my_input_dropdown.dart';
 import 'package:kasir/components/my_sacffold_form.dart';
@@ -11,6 +12,7 @@ import 'package:kasir/components/my_text_button.dart';
 import 'package:kasir/models/item_model.dart';
 import 'package:kasir/models/nota_model.dart';
 import 'package:kasir/models/penjualan_model.dart';
+import 'package:kasir/other/form.dart';
 import 'package:kasir/other/helper.dart';
 
 class PenjualanFormPage extends StatefulWidget {
@@ -24,6 +26,12 @@ class PenjualanFormPage extends StatefulWidget {
 class _PenjualanFormPage extends State<PenjualanFormPage> {
   final Map<String, dynamic> _formData = {};
   final Map<String, dynamic> _errors = {};
+  final Map<String, TextEditingController> _controller = {
+    'customer': TextEditingController(),
+    'contact': TextEditingController(),
+    'paid': TextEditingController(),
+    'discounts': TextEditingController(),
+  };
   final List<ItemCollection> _items = [];
   final List<NotaCollection> _nota = [];
   final List<Map<String, dynamic>> _cart = [];
@@ -39,11 +47,12 @@ class _PenjualanFormPage extends State<PenjualanFormPage> {
       var data = widget.data;
       if (data != null) {
         _formData['id'] = data.id;
-        _formData['customer'] = data.customer;
-        _formData['contact'] = data.contact;
-        _formData['paid'] = data.paid;
-        _formData['discount'] = data.discounts;
         _formData['nota'] = data.notaId;
+
+        _controller['customer']?.text = data.customer;
+        _controller['contact']?.text = data.contact;
+        _controller['paid']?.text = data.paid.toString();
+        _controller['discounts']?.text = data.discounts ?? '';
 
         for (var i in data.dPenjualan) {
           _cart.add({
@@ -62,80 +71,77 @@ class _PenjualanFormPage extends State<PenjualanFormPage> {
     });
   }
 
-  void cleanErrorsValidation() {
-    setState(() {
-      _errors.clear();
-    });
-  }
+  Map<String, dynamic> getFormData() {
+    var formData = _formData;
 
-  void errorValidation(response) {
-    setState(() {
-      for (var key in response['errors'].keys) {
-        _errors[key] = response['errors'][key].first;
-      }
-    });
+    for (var key in _controller.keys) {
+      formData[key] = _controller[key]?.text;
+    }
+
+    formData['item'] = [];
+    for (var i in _cart) {
+      formData['item'].add({
+        'id': i['item'].id,
+        'version': i['item'].version,
+        'jumlah': i['jumlah'],
+        'notes': i['notes'],
+      });
+    }
+
+    print(formData);
+    return formData;
   }
 
   void fetchItems() async {
-    var response = await itemModel.all();
-    var responseJson = jsonDecode(response.body);
-    if (mounted) {
-      setState(() {
-        for (var i in responseJson) {
+    await itemModel.all().then((response) {
+      if (mounted && response.statusCode == 200) {
+        for (var i in jsonDecode(response.body)) {
           _items.add(ItemCollection.fromJSON(i));
         }
-      });
-    }
+      }
+    });
+
+    setState(() {});
   }
 
   void fetchNota() async {
-    var response = await notaModel.all();
-    var responseJson = jsonDecode(response.body);
-    if (mounted) {
-      setState(() {
-        for (var i in responseJson) {
+    await notaModel.all().then((response) {
+      if (mounted && response.statusCode == 200) {
+        for (var i in jsonDecode(response.body)) {
           _nota.add(NotaCollection.fromJSON(i));
         }
-      });
-    }
+      }
+    });
+
+    setState(() {});
   }
 
   void createPenjualan() async {
-    _formData['item'] = [];
-    for (var i in _cart) {
-      _formData['item'].add({
-        'id': i['item'].id,
-        'version': i['item'].version,
-        'jumlah': i['jumlah'],
-        'notes': i['notes'],
-      });
-    }
-    var response = await penjualanModel.create(_formData);
-    var responseJson = jsonDecode(response.body);
-    if (responseJson.containsKey('errors')) {
-      errorValidation(responseJson);
-    } else if (mounted) {
-      Navigator.pop(context, responseJson);
-    }
+    cleanErrorsValidation(_errors);
+    await penjualanModel.create(getFormData()).then((response) {
+      var responseJson = jsonDecode(response.body);
+      if (responseJson.containsKey('errors')) {
+        errorValidation(responseJson, _errors);
+      } else if (mounted && response.statusCode == 200) {
+        Navigator.pop(context, responseJson);
+      }
+    });
+
+    setState(() {});
   }
 
   void updatePenjualan() async {
-    _formData['item'] = [];
-    for (var i in _cart) {
-      _formData['item'].add({
-        'id': i['item'].id,
-        'version': i['item'].version,
-        'jumlah': i['jumlah'],
-        'notes': i['notes'],
-      });
-    }
-    var response = await penjualanModel.update(_formData);
-    var responseJson = jsonDecode(response.body);
-    if (responseJson.containsKey('errors')) {
-      errorValidation(responseJson);
-    } else if (mounted) {
-      Navigator.pop(context, responseJson);
-    }
+    cleanErrorsValidation(_errors);
+    await penjualanModel.update(getFormData()).then((response) {
+      var responseJson = jsonDecode(response.body);
+      if (responseJson.containsKey('errors')) {
+        errorValidation(responseJson, _errors);
+      } else if (mounted && response.statusCode == 200) {
+        Navigator.pop(context, responseJson);
+      }
+    });
+
+    setState(() {});
   }
 
   Widget cartItem(index) {
@@ -269,6 +275,7 @@ class _PenjualanFormPage extends State<PenjualanFormPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 12.0),
                     child: MyInput(
                       label: 'Jumlah',
+                      keyboardType: TextInputType.number,
                       onChanged: (val) {
                         setState(() {
                           _bottomSheetItemQuantity = int.parse(val);
@@ -349,118 +356,102 @@ class _PenjualanFormPage extends State<PenjualanFormPage> {
           createPenjualan();
         }
       },
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 12.0),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: MyInput(
-                label: 'Customer',
-                initialValue: _formData['customer'],
-                errorText: _errors['customer'],
-                onChanged: (val) {
-                  setState(() {
-                    _formData['customer'] = val;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(height: 12.0),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: MyInput(
-                label: 'Contact',
-                initialValue: _formData['contact'],
-                errorText: _errors['contact'],
-                onChanged: (val) {
-                  setState(() {
-                    _formData['contact'] = val;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(height: 12.0),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: MyInput(
-                label: 'Paid',
-                initialValue: _formData['paid'].toString(),
-                errorText: _errors['paid'],
-                keyboardType: TextInputType.number,
-                onChanged: (val) {
-                  setState(() {
-                    _formData['paid'] = val;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(height: 12.0),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: MyInput(
-                label: 'Discount',
-                initialValue: _formData['discount'],
-                errorText: _errors['discount'],
-                onChanged: (val) {
-                  setState(() {
-                    _formData['discount'] = val;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(height: 12.0),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: MyInputDropdown(
-                initialValue: _formData['nota'],
-                label: 'Nota',
-                onChange: (val) {
-                  setState(() {
-                    _formData['nota'] = val;
-                  });
-                },
-                items: _nota
-                    .map((e) => {
-                          'text': e.name,
-                          'value': e.id,
-                        })
-                    .toList(),
-              ),
-            ),
-            const SizedBox(height: 12.0),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
-              child: Text('Items'),
-            ),
-            const SizedBox(height: 12.0),
-            for (var i = 0; i < _cart.length; i++)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: cartItem(i),
-              ),
-            const SizedBox(height: 12.0),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: SizedBox(
-                width: double.infinity,
-                child: MyTextButton(
-                  color: const Color(0xFFE4EBE6),
-                  onPressed: () async {
-                    await showCart();
-                  },
-                  child: const Icon(
-                    Icons.add,
-                    color: Colors.black,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 100.0)
-          ],
+      children: [
+        const SizedBox(height: 12.0),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          child: MyInput(
+            label: 'Customer',
+            controller: _controller['customer'],
+            errorText: _errors['customer'],
+          ),
         ),
-      ),
+        const SizedBox(height: 12.0),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          child: MyInput(
+            label: 'Phone',
+            controller: _controller['contact'],
+            keyboardType: TextInputType.phone,
+            errorText: _errors['contact'],
+          ),
+        ),
+        const SizedBox(height: 12.0),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          child: MyInput(
+            label: 'Paid',
+            controller: _controller['paid'],
+            errorText: _errors['paid'],
+            keyboardType: TextInputType.number,
+          ),
+        ),
+        const SizedBox(height: 12.0),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          child: MyInput(
+            label: 'Discount',
+            controller: _controller['discounts'],
+            errorText: _errors['discounts'],
+          ),
+        ),
+        const SizedBox(height: 12.0),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          child: MyInputDropdown(
+            initialValue: _formData['nota'],
+            label: 'Nota',
+            errorText: _errors['nota'],
+            onChange: (val) {
+              setState(() {
+                _formData['nota'] = val;
+              });
+            },
+            items: _nota
+                .map((e) => {
+                      'text': e.name,
+                      'value': e.id,
+                    })
+                .toList(),
+          ),
+        ),
+        const SizedBox(height: 12.0),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12.0),
+          child: Text('Items'),
+        ),
+        for (var i = 0; i < _cart.length; i++) ...[
+          const SizedBox(height: 12.0),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            child: cartItem(i),
+          ),
+        ],
+        const SizedBox(height: 4.0),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          child: SizedBox(
+            width: double.infinity,
+            child: MyTextButton(
+              padding: EdgeInsets.all(8.0),
+              color: const Color(0xFFE4EBE6),
+              onPressed: () async {
+                await showCart();
+              },
+              child: const Icon(
+                Icons.add,
+                color: Colors.black,
+              ),
+            ),
+          ),
+        ),
+        if (_errors['item'] != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            child: MyErrorText(errorText: _errors['item']),
+          ),
+        const SizedBox(height: 100.0)
+      ],
     );
   }
 }

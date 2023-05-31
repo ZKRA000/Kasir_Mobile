@@ -1,11 +1,15 @@
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:kasir/collections/menu_collection.dart';
 import 'package:kasir/collections/role_collection.dart';
+import 'package:kasir/components/my_elevated_button.dart';
 import 'package:kasir/components/my_input.dart';
+import 'package:kasir/components/my_error_text.dart';
 import 'package:kasir/components/my_sacffold_form.dart';
 import 'package:kasir/models/role_model.dart';
+import 'package:kasir/other/form.dart';
 
 class RoleFormPage extends StatefulWidget {
   final RoleCollection? data;
@@ -21,25 +25,36 @@ class _RoleFormPage extends State<RoleFormPage> {
   final List<MenuCollection> _menus = [];
   final Map<String, dynamic> _checkbox = {};
   final RoleModel roleModel = RoleModel();
+  final Map<String, TextEditingController> _controller = {
+    'name': TextEditingController()
+  };
 
-  void cleanErrorsValidation() {
+  void prepareForm(data) {
     setState(() {
-      _errors.clear();
+      _formData['id'] = data.id;
+      _controller['name']?.text = data.name;
     });
   }
 
-  void errorValidation(response) {
-    setState(() {
-      for (var key in response['errors'].keys) {
-        _errors[key] = response['errors'][key].first;
+  Map<String, dynamic> getFormData() {
+    var formData = _formData;
+    for (var key in _controller.keys) {
+      formData[key] = _controller[key]?.text;
+    }
+
+    formData['access'] = [];
+    _checkbox.forEach((key, value) {
+      if (value['value']) {
+        formData['access'].add(value['id']);
       }
     });
+
+    return formData;
   }
 
   void fetchRole() async {
-    var response = await roleModel.all();
-    var responseJson = jsonDecode(response.body);
-    setState(() {
+    await roleModel.all().then((response) {
+      var responseJson = jsonDecode(response.body);
       for (var i in responseJson['menus']) {
         _menus.add(MenuCollection.fromJSON(i));
         _checkbox[i['name']] = {'id': i['id'], 'value': false};
@@ -55,40 +70,36 @@ class _RoleFormPage extends State<RoleFormPage> {
         }
       }
     });
+
+    setState(() {});
   }
 
   void createRole() async {
-    cleanErrorsValidation();
-    _formData['access'] = [];
-    _checkbox.forEach((key, value) {
-      if (value['value']) {
-        _formData['access'].add(value['id']);
+    cleanErrorsValidation(_errors);
+    await roleModel.create(getFormData()).then((response) {
+      var responseJson = jsonDecode(response.body);
+      if (responseJson.containsKey('errors')) {
+        errorValidation(responseJson, _errors);
+      } else if (mounted && response.statusCode == 200) {
+        Navigator.pop(context, responseJson);
       }
     });
-    var response = await roleModel.create(_formData);
-    var responseJson = jsonDecode(response.body);
-    if (responseJson.containsKey('errors')) {
-      errorValidation(response);
-    } else if (mounted) {
-      Navigator.pop(context, responseJson);
-    }
+
+    setState(() {});
   }
 
   void updateRole() async {
-    cleanErrorsValidation();
-    _formData['access'] = [];
-    _checkbox.forEach((key, value) {
-      if (value['value']) {
-        _formData['access'].add(value['id']);
+    cleanErrorsValidation(_errors);
+    await roleModel.update(getFormData()).then((response) {
+      var responseJson = jsonDecode(response.body);
+      if (responseJson.containsKey('errors')) {
+        errorValidation(responseJson, _errors);
+      } else if (mounted && response.statusCode == 200) {
+        Navigator.pop(context, responseJson);
       }
     });
-    var response = await roleModel.update(_formData);
-    var responseJson = jsonDecode(response.body);
-    if (responseJson.containsKey('errors')) {
-      errorValidation(response);
-    } else if (mounted) {
-      Navigator.pop(context, responseJson);
-    }
+
+    setState(() {});
   }
 
   @override
@@ -96,8 +107,7 @@ class _RoleFormPage extends State<RoleFormPage> {
     super.initState();
     fetchRole();
     if (widget.data != null) {
-      _formData['id'] = widget.data?.id;
-      _formData['name'] = widget.data?.name;
+      prepareForm(widget.data);
     }
   }
 
@@ -105,46 +115,53 @@ class _RoleFormPage extends State<RoleFormPage> {
   Widget build(BuildContext context) {
     return MyScaffoldForm(
       title: 'Create Role',
-      onSave: () {
-        if (widget.data == null) {
-          createRole();
-        } else {
-          updateRole();
-        }
-      },
-      child: Column(
-        children: [
-          const SizedBox(height: 12.0),
+      children: [
+        const SizedBox(height: 12.0),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          child: MyInput(
+            label: 'Name',
+            controller: _controller['name'],
+            errorText: _errors['name'],
+          ),
+        ),
+        const SizedBox(height: 12.0),
+        for (var key in _checkbox.keys)
+          Row(
+            children: [
+              Checkbox(
+                value: _checkbox[key]['value'],
+                onChanged: (val) {
+                  setState(() {
+                    _checkbox[key]['value'] = val;
+                  });
+                },
+              ),
+              Text(key)
+            ],
+          ),
+        if (_errors['access'] != null)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            child: MyInput(
-              label: 'Name',
-              initialValue: _formData['name'],
-              errorText: _errors['name'],
-              onChanged: (val) {
-                setState(() {
-                  _formData['name'] = val;
-                });
-              },
-            ),
+            child: MyErrorText(errorText: _errors['access']),
           ),
-          const SizedBox(height: 12.0),
-          for (var key in _checkbox.keys)
-            Row(
-              children: [
-                Checkbox(
-                  value: _checkbox[key]['value'],
-                  onChanged: (val) {
-                    setState(() {
-                      _checkbox[key]['value'] = val;
-                    });
-                  },
-                ),
-                Text(key)
-              ],
-            )
-        ],
-      ),
+        const SizedBox(height: 20.0),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          child: MyElevatedButton(
+            color: Colors.orange,
+            child: Text(widget.data == null ? 'Buat' : 'Simpan'),
+            onPressed: () {
+              if (widget.data == null) {
+                createRole();
+              } else {
+                updateRole();
+              }
+            },
+          ),
+        ),
+      ],
     );
   }
 }

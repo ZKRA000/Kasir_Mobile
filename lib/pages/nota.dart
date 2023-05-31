@@ -38,12 +38,11 @@ class _NotaPage extends State<NotaPage> {
   }
 
   void fetchNota() async {
-    var response = await notaModel.all();
-    var responseJson = jsonDecode(response.body);
-    setState(() {
-      for (var i in responseJson) {
+    await notaModel.all().then((response) {
+      for (var i in jsonDecode(response.body)) {
         _nota.add(NotaCollection.fromJSON(i));
       }
+      setState(() {});
     });
   }
 
@@ -60,17 +59,18 @@ class _NotaPage extends State<NotaPage> {
   }
 
   Future<void> deleteNota(index) async {
-    var response = await notaModel.delete({'id': _nota[index].id});
-    var responseJson = jsonDecode(response.body);
-    if (responseJson is Map) {
-      if (responseJson.containsKey('warning')) {
-        Fluttertoast.showToast(msg: responseJson['warning']);
-      }
-    } else {
-      setState(() {
+    await notaModel.delete({'id': _nota[index].id}).then((response) {
+      var responseJson = jsonDecode(response.json);
+      if (responseJson is Map) {
+        if (responseJson.containsKey('warning')) {
+          Fluttertoast.showToast(msg: responseJson['warning']);
+        }
+      } else {
         _nota.removeAt(index);
-      });
-    }
+      }
+
+      setState(() {});
+    });
   }
 
   @override
@@ -101,9 +101,19 @@ class _NotaPage extends State<NotaPage> {
         child: Column(
           children: [
             for (var index = 0; index < _nota.length; index++) ...[
+              const SizedBox(height: 8.0),
               MyListItem(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 12.0),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        offset: Offset(0, 0.5),
+                        blurRadius: 1,
+                        color: Color(0xFFE8E8E8),
+                      )
+                    ],
+                  ),
                   child: ListTile(
                     leading: Container(
                       height: 50.0,
@@ -157,7 +167,6 @@ class _NotaPage extends State<NotaPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 12.0),
             ]
           ],
         ),

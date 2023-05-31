@@ -14,6 +14,10 @@ class UserModel extends Model {
     return await post('$baseUrl/api/user/edit', body);
   }
 
+  Future<dynamic> updatePassword(body) async {
+    return await post('$baseUrl/api/user/password', body);
+  }
+
   Future<dynamic> delete(body) async {
     return await post('$baseUrl/api/user/delete', body);
   }

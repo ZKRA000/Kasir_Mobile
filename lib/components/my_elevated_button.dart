@@ -1,27 +1,26 @@
 import 'package:flutter/material.dart';
 
-class MyTextButton extends StatelessWidget {
+class MyElevatedButton extends StatelessWidget {
   final void Function()? onPressed;
   final Widget child;
   final Color? color;
-  final OutlinedBorder? shape;
+  final Color? textColor;
   final EdgeInsets padding;
 
-  const MyTextButton({
+  const MyElevatedButton({
     super.key,
     this.onPressed,
     this.color,
-    this.shape,
+    this.textColor,
     this.padding = const EdgeInsets.all(0.0),
     required this.child,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
+    return ElevatedButton(
       onPressed: onPressed,
       style: ButtonStyle(
-        shape: MaterialStateProperty.all(shape),
         padding: MaterialStateProperty.all(padding),
         backgroundColor: MaterialStateProperty.resolveWith<Color?>(
           (states) {
@@ -30,6 +29,11 @@ class MyTextButton extends StatelessWidget {
             }
             return color;
           },
+        ),
+        textStyle: MaterialStateProperty.resolveWith(
+          (states) => TextStyle(
+            color: textColor,
+          ),
         ),
       ),
       child: child,

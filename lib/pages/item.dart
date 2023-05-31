@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:kasir/collections/item_collection.dart';
+import 'package:kasir/components/my_list_item.dart';
+import 'package:kasir/components/my_scaffold.dart';
 import 'package:kasir/helper/delete_dialog.dart';
 import 'package:kasir/models/item_model.dart';
 import 'package:kasir/other/helper.dart';
@@ -19,26 +21,26 @@ class _ItemPage extends State<ItemPage> {
   bool _loading = true;
 
   void fetchItem() async {
-    var response = await itemModel.all();
-    var responseJson = jsonDecode(response.body);
-    setState(() {
-      for (var i in responseJson) {
+    await itemModel.all().then((response) {
+      for (var i in jsonDecode(response.body)) {
         _items.add(ItemCollection.fromJSON(i));
       }
       _loading = false;
+
+      setState(() {});
     });
   }
 
   void deleteitem(index) async {
-    await itemModel.delete({'id': _items[index].id});
-
-    setState(() {
+    await itemModel.delete({'id': _items[index].id}).then((response) {
       _items.removeAt(index);
+
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
     });
 
-    if (context.mounted) {
-      Navigator.pop(context);
-    }
+    setState(() {});
   }
 
   void editItem(index) async {
@@ -74,64 +76,48 @@ class _ItemPage extends State<ItemPage> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Items'),
-          actions: [
-            IconButton(
-              onPressed: () async {
-                final newData = await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ItemFormPage()),
-                );
-                if (newData != null) {
-                  setState(() {
-                    _items.add(ItemCollection.fromJSON(newData));
-                  });
-                }
-              },
-              icon: const Icon(Icons.add),
-            )
-          ],
-        ),
-        body: Column(
+    return MyScaffold(
+      title: const Text('Item'),
+      onCreated: () async {
+        final newData = await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ItemFormPage()),
+        );
+        if (newData != null) {
+          setState(() {
+            _items.add(ItemCollection.fromJSON(newData));
+          });
+        }
+      },
+      loading: false,
+      child: SingleChildScrollView(
+        child: Column(
           children: [
-            if (_loading)
-              const Expanded(
-                child: Center(
-                  child: CircularProgressIndicator(),
+            for (var index = 0; index < _items.length; index++) ...[
+              const SizedBox(height: 8.0),
+              MyListItem(
+                child: ListTile(
+                  title: Text(upperCaseFirst(_items[index].nama)),
+                  subtitle: Text("Rp. ${idrCurrency(_items[index].harga)}"),
+                  trailing: PopupMenuButton(
+                    onSelected: (value) {
+                      if (value == 'delete') {
+                        showDeleteDialog(index);
+                      }
+                      if (value == 'edit') {
+                        editItem(index);
+                      }
+                    },
+                    itemBuilder: (context) {
+                      return const [
+                        PopupMenuItem(value: 'edit', child: Text('Edit')),
+                        PopupMenuItem(value: 'delete', child: Text('Delete')),
+                      ];
+                    },
+                  ),
                 ),
               )
-            else
-              Expanded(
-                child: ListView.builder(
-                  itemCount: _items.length,
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      title: Text(upperCaseFirst(_items[index].nama)),
-                      subtitle: Text("Rp. ${idrCurrency(_items[index].harga)}"),
-                      trailing: PopupMenuButton(
-                        onSelected: (value) {
-                          if (value == 'delete') {
-                            showDeleteDialog(index);
-                          }
-                          if (value == 'edit') {
-                            editItem(index);
-                          }
-                        },
-                        itemBuilder: (context) {
-                          return const [
-                            PopupMenuItem(value: 'edit', child: Text('Edit')),
-                            PopupMenuItem(
-                                value: 'delete', child: Text('Delete')),
-                          ];
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
+            ]
           ],
         ),
       ),

@@ -9,10 +9,10 @@ class PenjualanCollection {
   final int price;
   final String customer;
   final String contact;
-  final String discounts;
+  final String? discounts;
   final int paid;
   final List<DPenjualanCollection> dPenjualan;
-  final DateTime? archivedAt;
+  final String? archivedAt;
 
   PenjualanCollection({
     required this.id,

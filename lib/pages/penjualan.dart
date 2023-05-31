@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:kasir/collections/penjualan_collection.dart';
+import 'package:kasir/components/my_list_item.dart';
 import 'package:kasir/components/my_scaffold.dart';
 import 'package:kasir/helper/delete_dialog.dart';
 import 'package:kasir/models/penjualan_model.dart';
@@ -20,12 +21,12 @@ class _PenjualanPage extends State<PenjualanPage> {
   final PenjualanModel penjualanModel = PenjualanModel();
 
   void fetchPenjualan() async {
-    var response = await penjualanModel.all();
-    var responseJson = jsonDecode(response.body);
-    setState(() {
-      for (var i in responseJson) {
+    await penjualanModel.all().then((response) {
+      for (var i in jsonDecode(response.body)) {
         _penjualan.add(PenjualanCollection.fromJSON(i));
       }
+
+      setState(() {});
     });
   }
 
@@ -43,15 +44,14 @@ class _PenjualanPage extends State<PenjualanPage> {
   }
 
   void deletePenjualan(index) async {
-    var response = await penjualanModel.delete({'id': _penjualan[index].id});
-    if (response.body == 'true') {
-      setState(() {
-        _penjualan.removeAt(index);
-      });
-      if (mounted) {
+    await penjualanModel.delete({'id': _penjualan[index].id}).then((response) {
+      if (mounted && response.statusCode == 200) {
+        setState(() {
+          _penjualan.removeAt(index);
+        });
         Navigator.pop(context);
       }
-    }
+    });
   }
 
   void showDeleteDialog(index) async {
@@ -87,88 +87,89 @@ class _PenjualanPage extends State<PenjualanPage> {
           });
         }
       },
-      child: ListView.builder(
-        itemCount: _penjualan.length,
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.only(
-              top: 16.0,
-            ),
-            child: Container(
-              decoration: const BoxDecoration(color: Colors.white),
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            for (var index = 0; index < _penjualan.length; index++) ...[
+              const SizedBox(height: 8.0),
+              MyListItem(
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              upperCaseFirst(_penjualan[index].customer),
-                              style: const TextStyle(
-                                fontSize: 20.0,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 8.0),
-                            Text(
-                              _penjualan[index].status(),
-                              style: TextStyle(
-                                fontSize: 12.0,
-                                color: _penjualan[index].status() == 'Lunas'
-                                    ? Colors.green
-                                    : Colors.red,
-                              ),
-                            ),
-                            const SizedBox(height: 8.0),
-                            Text(
-                              'Rp. ${idrCurrency(_penjualan[index].price)}',
-                              style: const TextStyle(
-                                fontSize: 12.0,
-                              ),
-                            ),
-                            const SizedBox(height: 8.0),
-                            Opacity(
-                              opacity: 0.5,
-                              child: Text(
-                                _penjualan[index].nota,
-                                style: const TextStyle(
-                                  fontSize: 12.0,
-                                  fontWeight: FontWeight.w500,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  upperCaseFirst(_penjualan[index].customer),
+                                  style: const TextStyle(
+                                    fontSize: 20.0,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(height: 8.0),
+                                Text(
+                                  _penjualan[index].status(),
+                                  style: TextStyle(
+                                    fontSize: 12.0,
+                                    color: _penjualan[index].status() == 'Lunas'
+                                        ? Colors.green
+                                        : Colors.red,
+                                  ),
+                                ),
+                                const SizedBox(height: 8.0),
+                                Text(
+                                  'Rp. ${idrCurrency(_penjualan[index].price)}',
+                                  style: const TextStyle(
+                                    fontSize: 12.0,
+                                  ),
+                                ),
+                                const SizedBox(height: 8.0),
+                                Opacity(
+                                  opacity: 0.5,
+                                  child: Text(
+                                    _penjualan[index].nota,
+                                    style: const TextStyle(
+                                      fontSize: 12.0,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
-                      PopupMenuButton(
-                        onSelected: (value) {
-                          if (value == 'delete') {
-                            showDeleteDialog(index);
-                          }
+                          ),
+                          PopupMenuButton(
+                            onSelected: (value) {
+                              if (value == 'delete') {
+                                showDeleteDialog(index);
+                              }
 
-                          if (value == 'edit') {
-                            editPenjualan(index);
-                          }
-                        },
-                        itemBuilder: (context) {
-                          return const [
-                            PopupMenuItem(value: 'edit', child: Text('Edit')),
-                            PopupMenuItem(
-                                value: 'delete', child: Text('Delete')),
-                          ];
-                        },
+                              if (value == 'edit') {
+                                editPenjualan(index);
+                              }
+                            },
+                            itemBuilder: (context) {
+                              return const [
+                                PopupMenuItem(
+                                    value: 'edit', child: Text('Edit')),
+                                PopupMenuItem(
+                                    value: 'delete', child: Text('Delete')),
+                              ];
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          );
-        },
+            ]
+          ],
+        ),
       ),
     );
   }

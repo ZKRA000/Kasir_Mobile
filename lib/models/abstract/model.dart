@@ -29,21 +29,22 @@ class Model extends AbstractModel {
     return headers;
   }
 
-  dynamic check(response) async {
-    if ([200, 422].contains(response.statusCode)) {
-      // success, error inpute validation
-
-      return response;
-    } else if (response.statusCode == 401) {
+  Future<dynamic> check(res) async {
+    print(res.body);
+    if (res.statusCode == 401) {
       // unauthenticated
       await tableTruncate('personal_token');
       navigatorKey.currentState?.pushReplacementNamed('/');
-      return null;
-    } else {
-      // other
-      print(response.body);
-      throw Exception('error');
     }
+
+    try {
+      // trigger exception if json string is invalid
+      jsonDecode(res.body);
+    } on FormatException catch (e) {
+      throw (e);
+    }
+
+    return res;
   }
 
   @override
@@ -57,7 +58,7 @@ class Model extends AbstractModel {
       headers: headers,
     );
 
-    return check(response);
+    return await check(response);
   }
 
   @override
@@ -72,7 +73,7 @@ class Model extends AbstractModel {
       headers: headers,
       body: jsonEncode(formData),
     );
-    return check(response);
+    return await check(response);
   }
 
   Future<dynamic> postMultipart(
@@ -102,29 +103,7 @@ class Model extends AbstractModel {
 
     var streamedResponse = await multiPart.send();
     var response = await http.Response.fromStream(streamedResponse);
-    return check(response);
+
+    return await check(response);
   }
-
-  // Future<dynamic> postMultipart(
-  //     String url, Map<String, dynamic> formData, File? file) async {
-  //   String token = await getToken();
-  //   Map<String, String> headers = setHeaders({
-  //     'Authorization': 'Bearer $token',
-  //   });
-
-  //   if (file != null) {
-  //     String fileName = file.path.split('/').last;
-  //     formData.addAll({
-  //       "logo": await MultipartFile.fromFile(file.path, filename: fileName)
-  //     });
-  //   }
-
-  //   final dio = Dio();
-  //   var response = await dio.post(url,
-  //       data: FormData.fromMap(formData), options: Options(headers: headers));
-
-  //   print(response);
-
-  //   return check(response);
-  // }
 }

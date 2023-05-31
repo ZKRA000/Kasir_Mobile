@@ -8,7 +8,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  createTable('personal_token', {
+  await createTable('personal_token', {
     'id': 'INTEGER PRIMARY KEY',
     'token': 'TEXT',
   });

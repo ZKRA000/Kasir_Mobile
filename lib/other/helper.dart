@@ -5,6 +5,10 @@ String idrCurrency(int number) {
   return format.format(number);
 }
 
-String upperCaseFirst(String string) {
-  return string[0].toUpperCase() + string.substring(1, string.length);
+String upperCaseFirst(String? string) {
+  if (string!.isNotEmpty) {
+    return string[0].toUpperCase() + string.substring(1, string.length);
+  }
+
+  return '-';
 }

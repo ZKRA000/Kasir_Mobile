@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:kasir/components/my_input.dart';
 import 'package:kasir/models/abstract/model.dart';
 import 'package:kasir/other/env.dart';
+import 'package:kasir/other/form.dart';
 import 'package:kasir/other/sqflite.dart';
 
 class Login extends StatefulWidget {
@@ -18,28 +19,19 @@ class _LoginState extends State<Login> {
   final Model model = Model();
 
   void login() async {
-    setState(() {
-      _errors.clear();
-    });
+    cleanErrorsValidation(_errors);
 
-    var response = await model.post('$baseUrl/api/login', _formData);
-    var responseJson = jsonDecode(response.body);
+    Map<String, dynamic> response =
+        await model.post('$baseUrl/api/login', _formData);
 
-    if (response.statusCode == 200) {
+    if (response['body'] != null && response['body'].containsKey('errors')) {
+      errorValidation(response['body'], _errors);
+    } else if (context.mounted && response['res'].statusCode == 200) {
       tableTruncate('personal_token');
-      tableInsert('personal_token', {'token': responseJson['token']});
-      if (context.mounted) {
-        Navigator.pushReplacementNamed(context, 'dashboard');
-      }
-    } else {
-      if (responseJson.containsKey('errors')) {
-        setState(() {
-          for (var k in responseJson['errors'].keys) {
-            _errors[k] = responseJson['errors'][k].first;
-          }
-        });
-      }
+      tableInsert('personal_token', {'token': response['body']['token']});
+      Navigator.pushReplacementNamed(context, 'dashboard');
     }
+    setState(() {});
   }
 
   @override

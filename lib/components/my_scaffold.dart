@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:kasir/my_theme.dart';
 
 class MyScaffold extends StatelessWidget {
   final Widget title;
   final Widget child;
   final bool loading;
-  final void Function() onCreated;
+  final void Function()? onCreated;
 
   const MyScaffold({
     super.key,
     required this.title,
     required this.loading,
-    required this.onCreated,
+    this.onCreated,
     required this.child,
   });
 
@@ -19,12 +20,14 @@ class MyScaffold extends StatelessWidget {
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
+          backgroundColor: myPrimary,
           title: title,
           actions: [
-            IconButton(
-              onPressed: onCreated,
-              icon: const Icon(Icons.add),
-            )
+            if (onCreated != null)
+              IconButton(
+                onPressed: onCreated,
+                icon: const Icon(Icons.add),
+              )
           ],
         ),
         body: Column(

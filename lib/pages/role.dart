@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:kasir/collections/menu_collection.dart';
 import 'package:kasir/collections/role_collection.dart';
+import 'package:kasir/components/my_list_item.dart';
 import 'package:kasir/components/my_scaffold.dart';
 import 'package:kasir/helper/delete_dialog.dart';
 import 'package:kasir/models/role_model.dart';
@@ -24,10 +25,8 @@ class _RolePage extends State<RolePage> {
   final RoleModel roleModel = RoleModel();
 
   void fetchRole() async {
-    var response = await roleModel.all();
-    var responseJson = jsonDecode(response.body);
-    print(responseJson);
-    setState(() {
+    await roleModel.all().then((response) {
+      var responseJson = jsonDecode(response.body);
       _loading = false;
       for (var i in responseJson['roles']) {
         _roles.add(RoleCollection.fromJSON(i));
@@ -36,6 +35,8 @@ class _RolePage extends State<RolePage> {
         _menus.add(MenuCollection.fromJSON(e));
       }
     });
+
+    setState(() {});
   }
 
   void editRole(index) async {
@@ -51,21 +52,22 @@ class _RolePage extends State<RolePage> {
     }
   }
 
-  Future<void> deleteRole(id) async {
-    await roleModel.delete({'id': id});
+  Future<void> deleteRole(index) async {
+    await roleModel.delete({'id': _roles[index].id}).then((response) {
+      _roles.removeAt(index);
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    });
+
+    setState(() {});
   }
 
   void showDeleteDialog(index) async {
     await deleteDialog(
       context: context,
       onDelete: () async {
-        await deleteRole(_roles[index].id);
-        setState(() {
-          _roles.removeAt(index);
-        });
-        if (mounted) {
-          Navigator.pop(context);
-        }
+        await deleteRole(index);
       },
       title: 'Delete',
       content: 'Apakah anda yakin ingin menghapus ${_roles[index].name} ?',
@@ -92,79 +94,88 @@ class _RolePage extends State<RolePage> {
           });
         }
       },
-      child: ListView.builder(
-        itemCount: _roles.length,
-        itemBuilder: (context, index) {
-          return Container(
-            margin: const EdgeInsets.only(top: 16.0),
-            padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            for (var index = 0; index < _roles.length; index++) ...[
+              const SizedBox(height: 8.0),
+              MyListItem(
+                child: Container(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(
-                        upperCaseFirst(_roles[index].name),
-                        style: const TextStyle(
-                          fontSize: 20.0,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              upperCaseFirst(_roles[index].name),
+                              style: const TextStyle(
+                                fontSize: 20.0,
+                              ),
+                            ),
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Container(
+                                margin: const EdgeInsets.only(top: 8.0),
+                                height: 30.0,
+                                child: Row(
+                                  children: [
+                                    for (MenuCollection m in _menus)
+                                      if (_roles[index].access.contains(m.id))
+                                        Container(
+                                          margin:
+                                              const EdgeInsets.only(right: 8.0),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12.0,
+                                            vertical: 4.0,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange,
+                                            borderRadius:
+                                                BorderRadius.circular(12.0),
+                                          ),
+                                          child: Text(
+                                            m.name,
+                                            style: const TextStyle(
+                                              fontSize: 12.0,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Container(
-                          margin: const EdgeInsets.only(top: 12.0),
-                          height: 30.0,
-                          child: Row(
-                            children: [
-                              for (MenuCollection m in _menus)
-                                if (_roles[index].access.contains(m.id))
-                                  Container(
-                                    margin: const EdgeInsets.only(right: 8.0),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12.0,
-                                      vertical: 4.0,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      border: Border.all(color: Colors.grey),
-                                      borderRadius: BorderRadius.circular(12.0),
-                                    ),
-                                    child: Text(
-                                      m.name,
-                                      style: const TextStyle(
-                                        fontSize: 12.0,
-                                      ),
-                                    ),
-                                  ),
-                            ],
-                          ),
-                        ),
+                      PopupMenuButton(
+                        onSelected: (value) {
+                          if (value == 'delete') {
+                            showDeleteDialog(index);
+                          }
+
+                          if (value == 'edit') {
+                            editRole(index);
+                          }
+                        },
+                        itemBuilder: (context) {
+                          return const [
+                            PopupMenuItem(value: 'edit', child: Text('Edit')),
+                            PopupMenuItem(
+                                value: 'delete', child: Text('Delete')),
+                          ];
+                        },
                       ),
                     ],
                   ),
                 ),
-                PopupMenuButton(
-                  onSelected: (value) {
-                    if (value == 'delete') {
-                      showDeleteDialog(index);
-                    }
-
-                    if (value == 'edit') {
-                      editRole(index);
-                    }
-                  },
-                  itemBuilder: (context) {
-                    return const [
-                      PopupMenuItem(value: 'edit', child: Text('Edit')),
-                      PopupMenuItem(value: 'delete', child: Text('Delete')),
-                    ];
-                  },
-                ),
-              ],
-            ),
-          );
-        },
+              ),
+            ]
+          ],
+        ),
       ),
     );
   }
