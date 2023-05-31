@@ -33,6 +33,7 @@ dependencies:
   image_picker:
   dio:
   fluttertoast: ^8.2.1
+  syncfusion_flutter_charts: ^21.2.8
   
   flutter:
     sdk: flutter

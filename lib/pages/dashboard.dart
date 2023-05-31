@@ -8,6 +8,7 @@ import 'package:kasir/components/my_drawer.dart';
 import 'package:kasir/models/item_model.dart';
 import 'package:kasir/models/penjualan_model.dart';
 import 'package:kasir/models/profile_model.dart';
+import 'package:syncfusion_flutter_charts/charts.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -159,7 +160,19 @@ class _Dashboard extends State<Dashboard> {
                   ),
                 ],
               ),
-            )
+            ),
+            // Expanded(
+            //   child: SfCartesianChart(
+            //     primaryXAxis: CategoryAxis(),
+            //     series: [
+            //       LineSeries(
+            //         dataSource: _penjualan,
+            //         xValueMapper: (e, index) => e.customer,
+            //         yValueMapper: (e, index) => e.price,
+            //       )
+            //     ],
+            //   ),
+            // )
           ],
         ),
       ),
